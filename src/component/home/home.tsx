@@ -17,9 +17,10 @@ export function MyDrawer() {
       <Drawer.Screen name="Dashboard" component={DashboardView} />
       <Drawer.Screen name="ManageCatagory" component={CatagoryView} />
       <Drawer.Screen name="Machine" component={MachineView}
-		  options={{
-		    drawerItemStyle: { display: "none" }
-		  }}
+		  options={({ route }) => ({
+			  title: route.params.ctgryName + ' List',
+			  drawerItemStyle: { display: "none" }
+		  })}
 	  />
     </Drawer.Navigator>
   );
@@ -68,7 +69,12 @@ function DashboardView(): JSX.Element {
 function CustomDrawer(props): JSX.Element {
 	const list = useSelector(s => s.catagory.list);
 	const navigation = props.navigation;
-
+	const navState = navigation.getState();
+	const activeIndex = navState.index;
+	let activeCtgry = undefined;
+	if(navState.routeNames[activeIndex] === 'Machine')
+		activeCtgry =  navState.routes[activeIndex].params.ctgryId;
+	
 	return (
 		<DrawerContentScrollView {...props}>
 		  	<DrawerItemList {...props} />
@@ -77,7 +83,8 @@ function CustomDrawer(props): JSX.Element {
 					<DrawerItem
 						key={v.id}
 						label={v.name}
-						onPress={() => navigation.navigate('Machine', {ctgryId: v.id})}
+						onPress={() => navigation.navigate('Machine', {ctgryId: v.id, ctgryName: v.name})}
+						focused={activeCtgry === v.id}
 					/>
 				))
 			}
