@@ -39,6 +39,9 @@ const CatagoryAddStyle = StyleSheet.create({
 		...$$.mt2,
 		...$$.py2,
 		...$$.px2,
+		...$$.mxAuto,
+		...$$.w100,
+		maxWidth: 480,
 		borderBottomStyle: "solid",
 		borderBottomWidth: $$.Const.BorderWidth * 10,
 		borderBottomColor: $$.Const.Col.secondary,
@@ -76,6 +79,8 @@ export function CatagoryAdd(): JSX.Element {
 const CatagoryListStyle = StyleSheet.create({
 	wrapper: {
 		...$$.bgSecondary2,
+		...$$.flexWrap,
+		...$$.flexRow,
 		...$$.mt2,
 		...$$.pt2,
 		...$$.pb4,
@@ -110,9 +115,12 @@ const CatagoryItemStyle = StyleSheet.create({
 	wrapper: {
 		...$$.bgTheme,
 		...$$.mt2,
+		...$$.mr3,
 		...$$.py2,
 		...$$.px2,
 		...$$.rounded2,
+		...$$.w100,
+		maxWidth: 480,
 		borderStyle: "solid",
 		borderWidth: $$.Const.BorderWidth * 5,
 		borderColor: $$.Const.Col.primary,

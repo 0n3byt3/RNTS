@@ -29,7 +29,8 @@ export function MyDrawer() {
 const DashboardViewStyle = StyleSheet.create({
 	wrapper: {
 		...$$.bgSecondary2,
-		...$$.flex1,
+		...$$.flexWrap,
+		...$$.flexRow,
 		padding: 5,
 	},
 	ctgryLabel: {
@@ -55,8 +56,8 @@ function DashboardView(): JSX.Element {
 		{
 			list.map(v => {
 				return (
-					<View key={v.id} style={[$$.bgSecondary2, $$.flex1, $$.p1]}>
-						<Text style={[DashboardViewStyle.ctgryLabel]}>{v.name}</Text>
+					<View key={v.id} style={[$$.bgSecondary2, $$.p1]}>
+						<Text style={[DashboardViewStyle.ctgryLabel, {maxWidth: 480}]}>{v.name}</Text>
 						<MachineList ctgry={v} list={v.machine}/>
 					</View>
 				);
@@ -74,7 +75,7 @@ function CustomDrawer(props): JSX.Element {
 	let activeCtgry = undefined;
 	if(navState.routeNames[activeIndex] === 'Machine')
 		activeCtgry =  navState.routes[activeIndex].params.ctgryId;
-	
+
 	return (
 		<DrawerContentScrollView {...props}>
 		  	<DrawerItemList {...props} />

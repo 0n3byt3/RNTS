@@ -37,6 +37,7 @@ export function MachineView({route}): JSX.Element {
 	return (
 		<View style={[MachineViewStyle.wrapper]}>
 			<Btn.Primary
+				style={[$$.w100, $$.mxAuto, {maxWidth: 480}]}
 				text="Add Machine"
 				onPress={() => dispatchAndStore(dispatch, addMachine, {ctgryId})}
 			/>
@@ -48,6 +49,8 @@ export function MachineView({route}): JSX.Element {
 const MachineListStyle = StyleSheet.create({
 	wrapper: {
 		...$$.bgSecondary2,
+		...$$.flexWrap,
+		...$$.flexRow,
 		...$$.mt2,
 		...$$.pt2,
 		...$$.pb4,
@@ -75,9 +78,12 @@ const MachineItemStyle = StyleSheet.create({
 	wrapper: {
 		...$$.bgTheme,
 		...$$.mt2,
+		...$$.mr3,
 		...$$.py2,
 		...$$.px2,
 		...$$.rounded2,
+		...$$.w100,
+		maxWidth: 480,
 		borderStyle: "solid",
 		borderWidth: $$.Const.BorderWidth * 5,
 		borderColor: $$.Const.Col.primary,
