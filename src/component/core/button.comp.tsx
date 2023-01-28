@@ -84,6 +84,28 @@ export function Secondary({text = '', style = {}, ...props} :BasicProps): JSX.El
 	);
 }
 
+const TertiaryStyle = StyleSheet.create({
+	wrapper: {
+		...PrimaryStyle.wrapper,
+		...$$.bgNone,
+		...$$.px0
+	},
+	text: {
+		...PrimaryStyle.text,
+		...$$.textPrimary,
+	}
+});
+export function Tertiary({text = '', style = {}, ...props} :BasicProps): JSX.Element {
+	return (
+		<Basic
+			style={[TertiaryStyle.wrapper, style]}
+			text={text}
+			textStyle={TertiaryStyle.text}
+			{...props}
+		/>
+	);
+}
+
 const ActStyle = StyleSheet.create({
 	wrapper: {
 		...PrimaryStyle.wrapper,

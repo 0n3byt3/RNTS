@@ -2,9 +2,11 @@ import type {PropsWithChildren} from 'react';
 import {useEffect, useState} from 'react';
 import {ScrollView, View, Text, StyleSheet, Switch} from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
+import DatePicker from 'react-native-date-picker';
 import {addMachine, delMachine, setMachineAttr} from '../feature/catagory.slice.tsx';
 import $$ from '../../styles';
-import {Form, Btn} from '../core';
+import {Form, Btn, Util} from '../core';
+import {dispatchAndStore} from './catagory.tsx';
 
 type MachineListProps = PropsWithChildren<{
 	list: [object],
@@ -12,16 +14,22 @@ type MachineListProps = PropsWithChildren<{
 type MachineItemProps = PropsWithChildren<{
 	data: object,
 }>;
+type DatePickerModalProps = PropsWithChildren<{
+	date: object,
+	setDate: (date: number) => void
+}>;
 
 const MachineViewStyle = StyleSheet.create({
 	wrapper: {
+		...$$.bgSecondary2,
+		...$$.flex1,
 		padding: 5,
 	},
 });
 export function MachineView({route}): JSX.Element {
 	const {ctgryId} = route.params;
 	const dispatch = useDispatch();
-	const ctgry = useSelector(s => s.catagory.list)[ctgryId];
+	const ctgry = useSelector(s => s.catagory.list).filter(v => (v.id === ctgryId))[0];
 
 	if(!ctgry)//edge cases in dev fastrefresh
 		return ;
@@ -30,31 +38,35 @@ export function MachineView({route}): JSX.Element {
 		<View style={[MachineViewStyle.wrapper]}>
 			<Btn.Primary
 				text="Add Machine"
-				onPress={() => dispatch(addMachine({ctgryId}))}
+				onPress={() => dispatchAndStore(dispatch, addMachine, {ctgryId})}
 			/>
-			<MachineList ctgryId={ctgryId} list={ctgry.machine}/>
+			<MachineList ctgry={ctgry} list={ctgry.machine}/>
 		</View>
 	);
 }
 
 const MachineListStyle = StyleSheet.create({
 	wrapper: {
-		...$$.bgTheme,
+		...$$.bgSecondary2,
 		...$$.mt2,
-		...$$.py2,
+		...$$.pt2,
+		...$$.pb4,
 		...$$.px2,
-		...$$.rounded2,
-		borderRightStyle: "solid",
-		borderRightWidth: $$.Const.BorderWidth * 10,
 	},
 });
-export function MachineList({ctgryId, list = []} :MachineListProps): JSX.Element {
+export function MachineList({ctgry, list = []} :MachineListProps): JSX.Element {
+	if(!list.length)
+		return (
+			<Util.NoItemMsg/>
+		);
 
 	return (
-		<View>
-		{
-			list.map(v => (<MachineItem ctgryId={ctgryId} key={v.id} id={v.id} data={v}/>))
-		}
+		<View style={[$$.flex1]}>
+			<ScrollView contentContainerStyle={MachineListStyle.wrapper}>
+			{
+				list.map(v => (<MachineItem key={v.id} ctgry={ctgry} data={v}/>))
+			}
+			</ScrollView>
 		</View>
 	);
 }
@@ -71,79 +83,106 @@ const MachineItemStyle = StyleSheet.create({
 		borderColor: $$.Const.Col.primary,
 	},
 });
-export function MachineItem({ctgryId, id={v}, data} :MachineItemProps) {
-	const ctgry = useSelector(s => s.catagory.list)[ctgryId];
+export function MachineItem({ctgry, data} :MachineItemProps): JSX.Element {
 	const attr = ctgry.attr;
 	const dispatch = useDispatch();
 
 	function setAttr(attrId :string, value :any) {
-		dispatch(setMachineAttr({
-			ctgryId,
-			machineId: id,
+		dispatchAndStore(dispatch, setMachineAttr, {
+			ctgryId: ctgry.id,
+			machineId: data.id,
 			attrId,
 			attrVal: value,
-		}));
+		});
 	}
 
 	return (
 		<View style={MachineItemStyle.wrapper}>
 			<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter]}>
-				<Text style={[$$.textAlignLeft, $$.fs3, $$.fwBold]}>
+				<Text style={[$$.textAlignLeft, $$.fs3, $$.fwBold, $$.textPrimary]}>
 					{data.attr[ctgry.titleAttr]? data.attr[ctgry.titleAttr] : '(No Title)'}
 				</Text>
 				<Btn.Act
-					text='Delete Machine'
+					text='Delete'
 					style={[$$.ml2]}
-					onPress={() => dispatch(delMachine({ctgryId, machineId: data.id}))}
+					onPress={() => dispatchAndStore(dispatch, delMachine, {ctgryId: ctgry.id, machineId: data.id})}
 				/>
 			</View>
 			<View style={[$$.mt1]}>
 			{
-				Object.keys(attr).map(v => {
-					if(attr[v].type === 'text')
+				attr.map(v => {
+					if(v.type === 'text')
 						return (
-							<View key={v} style={[$$.flex, $$.justifyContentStart, $$.mt3]}>
+							<View key={v.id} style={[$$.flex, $$.justifyContentStart, $$.mt3]}>
 								<Text style={[$$.textAlignLeft, $$.pl1]}>
-									{v}
+									{v.name}
 								</Text>
 								<Form.Input
-									style={[]}
-									onChangeText={val => setAttr(v, val)}
-									value={data.attr[v]}
+									onChangeText={val => setAttr(v.id, val)}
+									value={data.attr[v.name]}
 								/>
 							</View>
 						);
-					else if(attr[v].type === 'num')
+					else if(v.type === 'num')
 						return (
-							<View key={v} style={[$$.flex, $$.justifyContentStart, $$.mt3]}>
+							<View key={v.id} style={[$$.flex, $$.justifyContentStart, $$.mt3]}>
 								<Text style={[$$.textAlignLeft, $$.pl1]}>
-									{v}
+									{v.name}
 								</Text>
 								<Form.Input
 									style={[]}
-									onChangeText={val => setAttr(v, val)}
-									value={data.attr[v]}
+									onChangeText={val => setAttr(v.id, val)}
+									value={data.attr[v.name]}
 									keyboardType="number-pad"
 								/>
 							</View>
 						);
-					else if(attr[v].type === 'checkbox')
+					else if(v.type === 'checkbox')
 						return (
-							<View key={v} style={[$$.flex, $$.alignItemsStart, $$.mt3]}>
+							<View key={v.id} style={[$$.flex, $$.alignItemsStart, $$.mt3]}>
 								<Text style={[$$.textAlignLeft, $$.pl1]}>
-									{v}
+									{v.name}
 								</Text>
 								<Switch
 									trackColor={{false: $$.Const.Col.darker, true: $$.Const.Col.primaryShadow}}
 									thumbColor={data.attr[v]? $$.Const.Col.primary : $$.Const.Col.secondary}
-									onValueChange={val => setAttr(v, val)}
-									value={data.attr[v]}
+									onValueChange={val => setAttr(v.id, val)}
+									value={data.attr[v.name]}
 								/>
+							</View>
+						);
+					else if(v.type === 'date')
+						return (
+							<View key={v.id} style={[$$.flex, $$.alignItemsStart, $$.mt3]}>
+								<Text style={[$$.textAlignLeft, $$.pl1]}>
+									{v.name}
+								</Text>
+							   <DatePickerModal date={data.attr[v.name]} setDate={val => setAttr(v.id, val)}/>
 							</View>
 						);
 				})
 			}
 			</View>
 		</View>
+	);
+}
+
+function DatePickerModal({date, setDate = f=>f}:DatePickerModalProps): JSX.Element {
+  	const [open, setOpen] = useState(false);
+
+	return (
+		<>
+			<Btn.Tertiary text={new Date(date).toLocaleString('en-GB',{hour12: false})} onPress={() => setOpen(true)} />
+			<DatePicker
+				modal
+				open={open}
+				date={new Date(date)}
+				onConfirm={(date) => {
+					setOpen(false);
+					setDate(date.getTime());
+				}}
+				onCancel={() => setOpen(false)}
+			/>
+	   </>
 	);
 }

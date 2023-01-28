@@ -2,17 +2,40 @@ import {useEffect, useState} from 'react';
 import {ScrollView, View, Text, StyleSheet} from 'react-native';
 import {useSelector, useDispatch} from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {loadData, storeData, addCtgry, delCtgry, addAttr, delAttr, setTitleAttr} from '../feature/catagory.slice.tsx';
+import {loadData, storeData, addCtgry, editCtgry, delCtgry, addAttr, delAttr, setTitleAttr} from '../feature/catagory.slice.tsx';
 import $$ from '../../styles';
-import {Form, Btn} from '../core';
+import {Form, Btn, Util} from '../core';
+
+export function dispatchAndStore(dispatch :object, action :object, payload: object = {}) {
+	dispatch(action(payload));
+	dispatch(storeData());
+}
 
 type CatagoryItemProps = PropsWithChildren<{
 	data: object,
 }>;
 
+const CatagoryViewStyle = StyleSheet.create({
+	wrapper: {
+		...$$.bgSecondary2,
+		...$$.flex1,
+		padding: 5,
+	},
+});
+export function CatagoryView(): JSX.Element {
+	return (
+		<ScrollView contentContainerStyle={[CatagoryViewStyle.wrapper]}>
+			<CatagoryAdd/>
+			<View style={[$$.flex1]}>
+				<CatagoryList/>
+			</View>
+		</ScrollView>
+	);
+}
+
 const CatagoryAddStyle = StyleSheet.create({
 	wrapper: {
-		...$$.bgTheme,
+		...$$.bgSecondary2,
 		...$$.mt2,
 		...$$.py2,
 		...$$.px2,
@@ -21,7 +44,7 @@ const CatagoryAddStyle = StyleSheet.create({
 		borderBottomColor: $$.Const.Col.secondary,
 	},
 });
-export function CatagoryAdd() {
+export function CatagoryAdd(): JSX.Element {
 	const dispatch = useDispatch();
 	const [name, setName] = useState("");
 
@@ -29,9 +52,8 @@ export function CatagoryAdd() {
 		if(!name)
 			return ;
 
-		dispatch(addCtgry({ctgryId: name}));
-
-		dispatch(storeData());
+		dispatchAndStore(dispatch, addCtgry, {name});
+		setName("");
 	}
 
 	return (
@@ -53,35 +75,40 @@ export function CatagoryAdd() {
 
 const CatagoryListStyle = StyleSheet.create({
 	wrapper: {
-		...$$.bgTheme,
+		...$$.bgSecondary2,
 		...$$.mt2,
-		...$$.py2,
+		...$$.pt2,
+		...$$.pb4,
 		...$$.px2,
 	},
 });
 export function CatagoryList() {
-	const ctgryState = useSelector(s => s.catagory);
-	const list = ctgryState.list;
+	const list = useSelector(s => s.catagory.list);
 	const dispatch = useDispatch();
-	console.log('list', list);
-
 
 	useEffect(() => {
 		dispatch(loadData());
 	}, []);
 
+	if(!list.length)
+		return (
+			<Util.NoItemMsg/>
+		);
+
 	return (
-		<ScrollView style={CatagoryListStyle.wrapper}>
+		<View style={[$$.flex1]}>
+			<ScrollView contentContainerStyle={CatagoryListStyle.wrapper}>
 			{
-				Object.keys(list).map(v => (<CatagoryItem key={v} id={v} data={list[v]}/>))
+				list.map(v => (<CatagoryItem key={v.id} data={v}/>))
 			}
-		</ScrollView>
+			</ScrollView>
+		</View>
 	);
 }
 
 const CatagoryItemStyle = StyleSheet.create({
 	wrapper: {
-		...$$.bgInfo1,
+		...$$.bgTheme,
 		...$$.mt2,
 		...$$.py2,
 		...$$.px2,
@@ -99,7 +126,7 @@ const CatagoryItemStyle = StyleSheet.create({
 		borderTopColor: $$.Const.Col.secondary,
 	},
 });
-export function CatagoryItem({id, data} :CatagoryItemProps) {
+export function CatagoryItem({data} :CatagoryItemProps) {
 	const dispatch = useDispatch();
 	const [newAttrName, setNewAttrName] = useState("");
 	const types = [
@@ -109,51 +136,63 @@ export function CatagoryItem({id, data} :CatagoryItemProps) {
 		'CheckBox',
 	];
 
+	function onSetCtgryName(name :string) {
+		if(!name)
+			return ;
+		dispatchAndStore(dispatch, editCtgry, {
+			id: data.id,
+			name: name,
+		});
+	}
 	function onAddAttr(type :string) {
 		if(!newAttrName)
 			return ;
-		dispatch(addAttr({
-			ctgryId: id,
-			attrId: newAttrName,
+		dispatchAndStore(dispatch, addAttr, {
+			ctgryId: data.id,
+			name: newAttrName,
 			type: type.toLowerCase()
-		}));
+		});
 		setNewAttrName("");
-
-		dispatch(storeData());
 	}
 
 	return (
 		<View style={CatagoryItemStyle.wrapper}>
 			<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter]}>
-				<Text style={[$$.fwBold, $$.textPrimary, $$.fs2]}>
-					{id}
-					<Text style={[$$.fstItalic, $$.fs5]}>
-						{`(def title: ${data.titleAttr? data.titleAttr : 'not set'})`}
-					</Text>
-				</Text>
+				<Form.Input
+					placeholder="Catagory Name"
+					style={[$$.p1, $$.textPrimary, $$.fwBold,  $$.fs3, $$.rounded1]}
+					onChangeText={onSetCtgryName}
+					value={data.name}
+				/>
 				<Btn.Act
 					text='Delete Catagory'
 					style={[$$.ml2]}
-					onPress={() => dispatch(delCtgry({ctgryId: id}))}
+					onPress={() => dispatchAndStore(dispatch, delCtgry, {id: data.id})}
 				/>
 			</View>
 			<View style={[$$.mt4]}>
 				{
-					Object.keys(data.attr).map(v => {
+					data.attr.map(v => {
 						return (
-							<View key={v} style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter, $$.mb2]}>
-								<Text style={[$$.w50, $$.p2, $$.border, $$.rounded2]}>{v}</Text>
-								<Text>{data.attr[v].type}</Text>
-								<Btn.Act
-									text='Delete'
-									style={[$$.ml2]}
-									onPress={() => dispatch(delAttr({ctgryId: id, attrId: v}))}
-								/>
-								<Btn.Act
-									text='Set Title'
-									style={[$$.ml2]}
-									onPress={() => dispatch(setTitleAttr({ctgryId: id, attrId: v}))}
-								/>
+							<View key={v.id} style={[$$.flex, $$.mb4]}>
+								<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter]}>
+									<Text>{`${v.type} field`.toUpperCase()}</Text>
+									<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter, $$.mb2]}>
+										<Btn.Act
+											text='Delete'
+											style={[$$.ml2]}
+											onPress={() => dispatchAndStore(dispatch, delAttr, {ctgryId: data.id, attrId: v.id})}
+										/>
+										<Btn.Act
+											text='Set Title'
+											style={[$$.ml2]}
+											onPress={() => dispatchAndStore(dispatch, setTitleAttr, {ctgryId: data.id, attrId: v.id})}
+										/>
+									</View>
+								</View>
+								<Text style={[$$.p2, $$.bgThemerReverse, $$.rounded2]}>
+									{v.name}
+								</Text>
 							</View>
 						);
 					})

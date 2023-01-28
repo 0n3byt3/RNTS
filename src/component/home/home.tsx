@@ -2,9 +2,9 @@ import {ScrollView, View, Text, StyleSheet} from 'react-native';
 import {createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerItem} from '@react-navigation/drawer';
 import {useSelector} from 'react-redux';
 import $$ from '../../styles';
-import {Form, Btn} from '../core';
-import {CatagoryAdd, CatagoryList} from './catagory.tsx';
-import {MachineView} from './machine.tsx';
+import {Form, Btn, Util} from '../core';
+import {CatagoryView} from './catagory.tsx';
+import {MachineView, MachineList} from './machine.tsx';
 
 const Drawer = createDrawerNavigator();
 
@@ -15,7 +15,8 @@ export function MyDrawer() {
 		drawerContent={(props) => <CustomDrawer {...props} />}
 	>
       <Drawer.Screen name="Dashboard" component={DashboardView} />
-      <Drawer.Screen name="Catagory" component={MachineView}
+      <Drawer.Screen name="ManageCatagory" component={CatagoryView} />
+      <Drawer.Screen name="Machine" component={MachineView}
 		  options={{
 		    drawerItemStyle: { display: "none" }
 		  }}
@@ -26,17 +27,40 @@ export function MyDrawer() {
 
 const DashboardViewStyle = StyleSheet.create({
 	wrapper: {
-		flex: 1,
+		...$$.bgSecondary2,
+		...$$.flex1,
 		padding: 5,
+	},
+	ctgryLabel: {
+		...$$.bgPrimaryReverse,
+		...$$.textAlignLeft,
+		...$$.fs2,
+		...$$.fwBold,
+		...$$.textPrimary,
+		...$$.p2,
+		...$$.rounded3,
 	},
 });
 function DashboardView(): JSX.Element {
+	const list = useSelector(s => s.catagory.list);
+
+	if(!list.length)
+		return (
+			<Util.NoItemMsg/>
+		);
+
 	return (
 		<ScrollView contentContainerStyle={[DashboardViewStyle.wrapper]}>
-			<CatagoryAdd/>
-			<View>
-				<CatagoryList/>
-			</View>
+		{
+			list.map(v => {
+				return (
+					<View key={v.id} style={[$$.bgSecondary2, $$.flex1, $$.p1]}>
+						<Text style={[DashboardViewStyle.ctgryLabel]}>{v.name}</Text>
+						<MachineList ctgry={v} list={v.machine}/>
+					</View>
+				);
+			})
+		}
 		</ScrollView>
 	);
 }
@@ -49,11 +73,11 @@ function CustomDrawer(props): JSX.Element {
 		<DrawerContentScrollView {...props}>
 		  	<DrawerItemList {...props} />
 			{
-				Object.keys(list).map(v => (
+				list.map(v => (
 					<DrawerItem
-						key={v}
-						label={v}
-						onPress={() => navigation.navigate('Catagory', {ctgryId: v})}
+						key={v.id}
+						label={v.name}
+						onPress={() => navigation.navigate('Machine', {ctgryId: v.id})}
 					/>
 				))
 			}
