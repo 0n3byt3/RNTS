@@ -18,7 +18,7 @@ export function MyDrawer() {
       <Drawer.Screen name="ManageCatagory" component={CatagoryView} />
       <Drawer.Screen name="Machine" component={MachineView}
 		  options={({ route }) => ({
-			  title: route.params.ctgryName + ' List',
+			  title: route.params? `${route.params.ctgryName} List` : '',
 			  drawerItemStyle: { display: "none" }
 		  })}
 	  />
