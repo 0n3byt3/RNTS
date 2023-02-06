@@ -1,7 +1,7 @@
 import {StyleSheet} from 'react-native';
 import getColors from './colors';
 
-let _theme = 'light';
+let _theme = 'dark';
 export function setTheme(theme) {
 	_theme = theme;
 };

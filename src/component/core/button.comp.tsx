@@ -1,10 +1,14 @@
 import type {PropsWithChildren} from 'react';
 import {StyleSheet, Text, TouchableOpacity} from 'react-native';
 import $$ from '../../styles';
+import {FA} from './util.comp';
 
 type BasicProps = PropsWithChildren<{
 	text: string,
-	textStyle: object,
+	textStyle?: object,
+	icon: string,
+	iconFamily: string,
+	iconFill: string,
 	style: object,
 	loading?: boolean,
 	disabled?: boolean
@@ -15,7 +19,7 @@ const BasicStyle = StyleSheet.create({
 		opacity: .5,
 	},
 });
-function Basic({text = '', textStyle = {}, style = {}, loading, disabled, ...props} :BasicProps): JSX.Element {
+function Basic({text = '', textStyle = {}, icon = '', iconFamily = 'fad', iconFill = '', style = {}, loading, disabled, ...props} :BasicProps): JSX.Element {
 	let loadStyl = (loading || disabled)? BasicStyle.disabled : {};
 
 	return (
@@ -24,9 +28,14 @@ function Basic({text = '', textStyle = {}, style = {}, loading, disabled, ...pro
 			disabled={loading? true : disabled}
 			{...props}
 	      >
-		  	<Text style={textStyle}>
-				{text}
-			</Text>
+		  	{!!icon &&
+				<FA icon={icon} family={iconFamily} fill={iconFill}/>
+			}
+			{!!text &&
+				<Text style={textStyle}>
+					{text}
+				</Text>
+			}
 		  </TouchableOpacity>
 	);
 }
@@ -49,12 +58,13 @@ const PrimaryStyle = StyleSheet.create({
 		textAlign: 'center',
 	}
 });
-export function Primary({text = '', style = {}, ...props} :BasicProps): JSX.Element {
+export function Primary({text = '', iconFill, style = {}, ...props} :BasicProps): JSX.Element {
 	return (
 		<Basic
 			style={[PrimaryStyle.wrapper, style]}
 			text={text}
 			textStyle={PrimaryStyle.text}
+			iconFill={iconFill || $$.Const.Col.theme}
 			{...props}
 		/>
 	);
@@ -73,12 +83,13 @@ const SecondaryStyle = StyleSheet.create({
 		...$$.textPrimary,
 	}
 });
-export function Secondary({text = '', style = {}, ...props} :BasicProps): JSX.Element {
+export function Secondary({text = '', iconFill, style = {}, ...props} :BasicProps): JSX.Element {
 	return (
 		<Basic
 			style={[SecondaryStyle.wrapper, style]}
 			text={text}
 			textStyle={SecondaryStyle.text}
+			iconFill={iconFill || $$.Const.Col.primary}
 			{...props}
 		/>
 	);
@@ -95,12 +106,13 @@ const TertiaryStyle = StyleSheet.create({
 		...$$.textPrimary,
 	}
 });
-export function Tertiary({text = '', style = {}, ...props} :BasicProps): JSX.Element {
+export function Tertiary({text = '', iconFill, style = {}, ...props} :BasicProps): JSX.Element {
 	return (
 		<Basic
 			style={[TertiaryStyle.wrapper, style]}
 			text={text}
 			textStyle={TertiaryStyle.text}
+			iconFill={iconFill || $$.Const.Col.primary}
 			{...props}
 		/>
 	);
@@ -115,15 +127,16 @@ const ActStyle = StyleSheet.create({
 	},
 	text: {
 		...PrimaryStyle.text,
-			...$$.textThemeReverse,
+		...$$.textThemeReverse,
 	}
 });
-export function Act({text = '', style = {}, ...props} :BasicProps): JSX.Element {
+export function Act({text = '', iconFill, style = {}, ...props} :BasicProps): JSX.Element {
 	return (
 		<Basic
 			style={[ActStyle.wrapper, style]}
 			text={text}
 			textStyle={SecondaryStyle.text}
+			iconFill={iconFill || $$.Const.Col.primary}
 			{...props}
 		/>
 	);

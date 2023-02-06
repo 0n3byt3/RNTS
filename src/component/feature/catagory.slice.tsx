@@ -1,11 +1,35 @@
+import type {PayloadAction} from '@reduxjs/toolkit';
+import type {RootState} from '../home/store';
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const storeData = createAsyncThunk(
+export interface Attribute {
+	id: number;
+	name: string;
+	type: "text" | "num" | "checkbox" | "date";
+	defVal: any;
+}
+export interface Machine {
+	id: number;
+	attr: {[attrName: string] : any};
+}
+export interface Catagory {
+	id: number;
+	name: string;
+	attr: Attribute[];
+	titleAttr: string;
+	machine: Machine[];
+}
+interface CatagoryState {
+	list: Catagory[];
+	counterId: number;
+}
+
+const storeData = createAsyncThunk<any, undefined, {state: RootState}>(
 	'catagory/storeData',
 	(arg, thunkAPI) => {
-		const ctgryState = thunkAPI.getState().catagory;
-		let d = JSON.stringify(ctgryState);
+		const ctgryState: CatagoryState = thunkAPI.getState().catagory;
+		let d: string = JSON.stringify(ctgryState);
 		return  AsyncStorage.setItem("ctgryData", d).catch(err => {
 			console.error(err);
 		});
@@ -13,37 +37,42 @@ const storeData = createAsyncThunk(
 );
 const loadData = createAsyncThunk(
 	'catagory/loadData',
-	(arg, thunkAPI) => {
-		return AsyncStorage.getItem("ctgryData").then(storedData => {
-			storedData = (storedData != null)? JSON.parse(storedData) : {};
-			return storedData;
-		}).catch(err => {
-			console.error(err);
-		});
+	async (arg, {rejectWithValue}) => {
+		try {
+			const storedData = await AsyncStorage.getItem("ctgryData");
+			const d = storedData? JSON.parse(storedData) : {
+				counterId: 1,
+				list: [],
+			};
+			return d as CatagoryState;
+		} catch (err) {
+			return rejectWithValue(console.error(err));
+		}
 	}
 );
-export {storeData, loadData};
+
+const initialState: CatagoryState = {
+	list: [],
+	counterId: 1,
+}
 
 export const catagorySlice = createSlice({
 	name: 'catagory',
-	initialState: {
-		list: [],
-		counterId: 1,
-	},
+	initialState,
 	reducers: {
-		addCtgry: (state, act) => {
-			const d = act.payload;
+		addCtgry: (state, act: PayloadAction<Catagory>) => {
+			const d: Catagory = act.payload;
 			state.list.push({
 				id: state.counterId++,
 				name: d.name,
 				attr: [],
-				titleAttr: undefined,
+				titleAttr: "",
 				machine: [],
 			});
 		},
 		editCtgry: (state, act) => {
 			const d = act.payload;
-			const ctgry = state.list.filter(v => (v.id === d.id))[0];
+			const ctgry: Catagory = state.list.filter(v => (v.id === d.id))[0];
 			ctgry.name = d.name;
 		},
 		delCtgry: (state, act) => {
@@ -54,32 +83,20 @@ export const catagorySlice = createSlice({
 		addAttr: (state, act) => {
 			const d = act.payload;
 			const ctgry = state.list.filter(v => (v.id === d.ctgryId))[0];
-			if(ctgry.attr.filter(v => (v.name === d.name)).length)
-				return ;//duplicate attr
 			ctgry.attr.push({
 				id: state.counterId++,
 				name: d.name,
 				type: d.type,
+				defVal: d.defVal,
 			});
 			ctgry.machine.forEach(machine => {
-				if(d.type === 'text')
-					machine.attr[d.name] = 'textField';
-				else if(d.type === 'num')
-					machine.attr[d.name] = '1';
-				else if(d.type === 'date')
-					machine.attr[d.name] = new Date().getTime();
-				else if(d.type === 'checkbox')
-					machine.attr[d.name] = false;
-				else
-					machine.attr[d.name] = undefined;
+				machine.attr[d.name] = d.defVal;
 			});
 		},
 		delAttr: (state, act) => {
 			const d = act.payload;
 			const ctgry = state.list.filter(v => (v.id === d.ctgryId))[0];
 			const attr = ctgry.attr.filter(v => (v.id === d.attrId))[0];
-			if(!attr)
-				return ;
 			ctgry.machine.forEach(v => {
 				if(v.attr[d.attr.name])
 					delete v.attr[d.attr.name];
@@ -96,24 +113,15 @@ export const catagorySlice = createSlice({
 		//machine
 		addMachine: (state, act) => {
 			const d = act.payload;
-			const ctgry = state.list.filter(v => (v.id === d.ctgryId))[0];
-			const machine = {
+			const ctgry: Catagory = state.list.filter(v => (v.id === d.ctgryId))[0];
+			const machine: Machine = {
 				id: state.counterId++,
 				attr: {},
 			};
 			ctgry.attr.forEach(v => {
-				if(v.type === 'text')
-					machine.attr[v.name] = 'textField';
-				else if(v.type === 'num')
-					machine.attr[v.name] = "1";
-				else if(v.type === 'date')
-					machine.attr[v.name] = new Date().getTime();
-				else if(v.type === 'checkbox')
-					machine.attr[v.name] = false;
-				else
-					machine.attr[v.name] = undefined;
+				machine.attr[v.name] = v.defVal;
 			});
-			ctgry.machine.push(machine);
+			ctgry.machine = [...ctgry.machine, machine];
 		},
 		delMachine: (state, act) => {
 			const d = act.payload;
@@ -131,13 +139,14 @@ export const catagorySlice = createSlice({
 		},
 	},
 	extraReducers: (builder) => {
-		builder.addCase(loadData.fulfilled, (state, act) => {
-		 	state.counterId = act.payload.counterId || 1;
-		 	state.list = act.payload.list || [];
+		builder.addCase(loadData.fulfilled, (state, {payload}) => {
+		 	state.counterId = payload.counterId;
+		 	state.list = payload.list;
 		})
 	},
 });
 
-export const {setStateData, addCtgry, editCtgry, delCtgry, addAttr, delAttr, setTitleAttr, addMachine, delMachine, setMachineAttr} = catagorySlice.actions;
+export {storeData, loadData};
+export const {addCtgry, editCtgry, delCtgry, addAttr, delAttr, setTitleAttr, addMachine, delMachine, setMachineAttr} = catagorySlice.actions;
 
 export default catagorySlice.reducer;

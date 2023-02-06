@@ -1,9 +1,10 @@
+import type {PropsWithChildren} from 'react';
 import React from 'react';
 import {TextInput, StyleSheet} from 'react-native';
 import $$ from '../../styles';
 
 type InputProps = PropsWithChildren<{
-	style: [object],
+	style: [],
 }>;
 const InputStyle = StyleSheet.create({
 	wrapper: {

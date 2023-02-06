@@ -1,19 +1,23 @@
+import type {RootState, AppDispatch} from './store';
+import type {Catagory} from '../feature/catagory.slice';
+import type {PropsWithChildren} from 'react';
 import {useEffect, useState} from 'react';
 import {ScrollView, View, Text, StyleSheet} from 'react-native';
-import {useSelector, useDispatch} from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {loadData, storeData, addCtgry, editCtgry, delCtgry, addAttr, delAttr, setTitleAttr} from '../feature/catagory.slice.tsx';
+import {storeData, addCtgry, editCtgry, delCtgry, addAttr, delAttr, setTitleAttr} from '../feature/catagory.slice';
+import {useAppSelector, useAppDispatch} from './hooks';
 import $$ from '../../styles';
 import {Form, Btn, Util} from '../core';
+import {toast} from '../toast';
 
-export function dispatchAndStore(dispatch :object, action :object, payload: object = {}) {
+export function dispatchAndStore(dispatch: AppDispatch, action: (pl: any) => any, payload: object = {}) {
 	dispatch(action(payload));
 	dispatch(storeData());
 }
 
-type CatagoryItemProps = PropsWithChildren<{
-	data: object,
-}>;
+interface CatagoryItemProps {
+	data: Catagory;
+}
 
 const CatagoryViewStyle = StyleSheet.create({
 	wrapper: {
@@ -36,24 +40,35 @@ export function CatagoryView(): JSX.Element {
 const CatagoryAddStyle = StyleSheet.create({
 	wrapper: {
 		...$$.bgSecondary2,
-		...$$.mt2,
-		...$$.py2,
+		...$$.pt2,
+		...$$.pb4,
 		...$$.px2,
 		...$$.mxAuto,
 		...$$.w100,
 		maxWidth: 480,
 		borderBottomStyle: "solid",
-		borderBottomWidth: $$.Const.BorderWidth * 10,
+		borderBottomWidth: $$.Const.BorderWidth * 5,
 		borderBottomColor: $$.Const.Col.secondary,
 	},
 });
 export function CatagoryAdd(): JSX.Element {
-	const dispatch = useDispatch();
+	const list = useAppSelector(s => s.catagory.list);
+	const dispatch = useAppDispatch();
 	const [name, setName] = useState("");
 
-	function add() {
-		if(!name)
-			return ;
+	function onAdd() {
+		const err = [];
+
+		if(!name) {
+			err.push("Catagory Name Can't be Empty!");
+		} else if(list.filter((v: Catagory) => (v.name.toLowerCase() === name.toLowerCase())).length) {
+			err.push("Duplicate Catagory Name!");
+		}
+
+		if(err.length) {
+			toast.err(err);
+			return;
+		}
 
 		dispatchAndStore(dispatch, addCtgry, {name});
 		setName("");
@@ -69,8 +84,9 @@ export function CatagoryAdd(): JSX.Element {
 			/>
 			<Btn.Primary
 				style={[$$.mt2]}
+				icon='plus'
 				text="Add Catagory"
-				onPress={add}
+				onPress={onAdd}
 			/>
 		</View>
 	);
@@ -88,12 +104,7 @@ const CatagoryListStyle = StyleSheet.create({
 	},
 });
 export function CatagoryList() {
-	const list = useSelector(s => s.catagory.list);
-	const dispatch = useDispatch();
-
-	useEffect(() => {
-		dispatch(loadData());
-	}, []);
+	const list: Catagory[] = useAppSelector(s => s.catagory.list);
 
 	if(!list.length)
 		return (
@@ -104,7 +115,7 @@ export function CatagoryList() {
 		<View style={[$$.flex1]}>
 			<ScrollView contentContainerStyle={CatagoryListStyle.wrapper}>
 			{
-				list.map(v => (<CatagoryItem key={v.id} data={v}/>))
+				list.map((v: Catagory) => (<CatagoryItem key={v.id} data={v}/>))
 			}
 			</ScrollView>
 		</View>
@@ -135,8 +146,11 @@ const CatagoryItemStyle = StyleSheet.create({
 	},
 });
 export function CatagoryItem({data} :CatagoryItemProps) {
-	const dispatch = useDispatch();
+	const list: Catagory[] = useAppSelector(s => s.catagory.list);
+	const dispatch = useAppDispatch();
 	const [newAttrName, setNewAttrName] = useState("");
+	const [ctgryName, setCtgryName] = useState(data.name);
+
 	const types = [
 		'Text',
 		'Num',
@@ -144,36 +158,84 @@ export function CatagoryItem({data} :CatagoryItemProps) {
 		'CheckBox',
 	];
 
-	function onSetCtgryName(name :string) {
-		if(!name)
-			return ;
+	function onSetCtgryName() {
+		const err = [];
+
+		if(!ctgryName) {
+			err.push("Catagory Name Can't be Empty!");
+		} else if(list.filter((v: Catagory) => (v.name.toLowerCase() === ctgryName.toLowerCase())).length) {
+			err.push("Duplicate Catagory Name!");
+		}
+
+		if(err.length) {
+			toast.err(err);
+			return setCtgryName(data.name);
+		}
+
 		dispatchAndStore(dispatch, editCtgry, {
 			id: data.id,
-			name: name,
+			name: ctgryName,
 		});
+
 	}
 	function onAddAttr(type :string) {
-		if(!newAttrName)
+		const err = [];
+		let defVal: any;
+		type = type.toLowerCase();
+
+		if(!newAttrName) {
+			err.push("Field Name Can't be Empty!");
+		} else if(data.attr.filter(v => (v.name.toLowerCase() === newAttrName.toLowerCase())).length) {
+			err.push("Duplicate Field Name!");
+		}
+
+		if(err.length) {
+			toast.err(err);
 			return ;
+		}
+
+		if(type === 'text')
+			defVal = 'no text';
+		else if(type === 'num')
+			defVal = '1';
+		else if(type === 'date')
+			defVal = new Date().getTime();
+		else if(type === 'checkbox')
+			defVal = false;
+
 		dispatchAndStore(dispatch, addAttr, {
 			ctgryId: data.id,
 			name: newAttrName,
-			type: type.toLowerCase()
+			type: type.toLowerCase(),
+			defVal,
 		});
 		setNewAttrName("");
 	}
 
 	return (
 		<View style={CatagoryItemStyle.wrapper}>
-			<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter]}>
-				<Form.Input
-					placeholder="Catagory Name"
-					style={[$$.p1, $$.textPrimary, $$.fwBold,  $$.fs3, $$.rounded1]}
-					onChangeText={onSetCtgryName}
-					value={data.name}
-				/>
+			<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsStart]}>
+				<View style={[]}>
+					<Form.Input
+						placeholder="Catagory Name"
+						style={[$$.p1, $$.textPrimary, $$.fwBold,  $$.fs3, $$.rounded1]}
+						onChangeText={setCtgryName}
+						value={ctgryName}
+						onEndEditing={onSetCtgryName}
+					/>
+					<View style={[$$.mt2, $$.flexRow, $$.justifyContentStart, $$.alignItemsStart]}>
+						<Text style={[$$.textSecondary, $$.fs5]}>Title Field:</Text>
+						{
+							data.titleAttr?
+								(<Text style={[$$.ml1, $$.textThemeReverse, $$.fwBold]}>{data.titleAttr}</Text>)
+							:
+								(<Text style={[$$.ml1, $$.fstItalic, $$.textSecondary, $$.fs5]}>[not set]</Text>)
+						}
+					</View>
+				</View>
 				<Btn.Act
-					text='Delete Catagory'
+					icon="trashCan"
+					iconFill={$$.Const.Col.danger2}
 					style={[$$.ml2]}
 					onPress={() => dispatchAndStore(dispatch, delCtgry, {id: data.id})}
 				/>
@@ -184,21 +246,22 @@ export function CatagoryItem({data} :CatagoryItemProps) {
 						return (
 							<View key={v.id} style={[$$.flex, $$.mb4]}>
 								<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter]}>
-									<Text>{`${v.type} field`.toUpperCase()}</Text>
+									<Text style={[$$.textThemeReverse]}>{`${v.type} field`.toUpperCase()}</Text>
 									<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter, $$.mb2]}>
 										<Btn.Act
-											text='Delete'
-											style={[$$.ml2]}
-											onPress={() => dispatchAndStore(dispatch, delAttr, {ctgryId: data.id, attrId: v.id})}
-										/>
-										<Btn.Act
 											text='Set Title'
+											icon='text'
 											style={[$$.ml2]}
 											onPress={() => dispatchAndStore(dispatch, setTitleAttr, {ctgryId: data.id, attrId: v.id})}
 										/>
+										<Btn.Act
+											icon="trashCan"
+											style={[$$.ml2]}
+											onPress={() => dispatchAndStore(dispatch, delAttr, {ctgryId: data.id, attrId: v.id})}
+										/>
 									</View>
 								</View>
-								<Text style={[$$.p2, $$.bgThemerReverse, $$.rounded2]}>
+								<Text style={[$$.p2, $$.bgThemerReverse, $$.rounded2, $$.textThemeReverse]}>
 									{v.name}
 								</Text>
 							</View>
@@ -218,7 +281,8 @@ export function CatagoryItem({data} :CatagoryItemProps) {
 							<Btn.Secondary
 								key={v}
 								style={[$$.m1]}
-								text={`Add ${v} Field`}
+								text={`${v} Field`}
+								icon="plus"
 								onPress={() => onAddAttr(v)}
 							/>
 						))
