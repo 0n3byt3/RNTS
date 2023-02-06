@@ -1,7 +1,7 @@
 import type {PropsWithChildren} from 'react';
 import type {Catagory, Machine} from '../feature/catagory.slice';
 import type {MachineViewProps} from './home';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import {ScrollView, View, Text, StyleSheet, Switch} from 'react-native';
 import DatePicker from 'react-native-date-picker';
 import {addMachine, delMachine, setMachineAttr} from '../feature/catagory.slice';
@@ -17,6 +17,13 @@ interface MachineListProps {
 interface MachineItemProps {
 	data: Machine;
 	ctgry: Catagory;
+}
+interface MachineItemAttrProps {
+	ctgryId: number;
+	attrId: number;
+	attrType: 'text' | 'num' | 'date' | 'checkbox';
+	attrVal: any;
+	machineId: number;
 }
 interface DatePickerModalProps {
 	date: number;
@@ -100,15 +107,6 @@ export function MachineItem({ctgry, data}: MachineItemProps): JSX.Element {
 	const attr = ctgry.attr;
 	const dispatch = useAppDispatch();
 
-	function setAttr(attrId: number, value: any) {
-		dispatchAndStore(dispatch, setMachineAttr, {
-			ctgryId: ctgry.id,
-			machineId: data.id,
-			attrId,
-			attrVal: value,
-		});
-	}
-
 	return (
 		<View style={MachineItemStyle.wrapper}>
 			<View style={[$$.flexRow, $$.justifyContentBetween, $$.alignItemsCenter]}>
@@ -121,63 +119,72 @@ export function MachineItem({ctgry, data}: MachineItemProps): JSX.Element {
 					onPress={() => dispatchAndStore(dispatch, delMachine, {ctgryId: ctgry.id, machineId: data.id})}
 				/>
 			</View>
-			<View style={[$$.mt1]}>
+			<View style={[$$.mt1, $$.px1]}>
 			{
-				attr.map(v => {
-					if(v.type === 'text')
-						return (
-							<View key={v.id} style={[$$.flex, $$.justifyContentStart, $$.mt3]}>
-								<Text style={[$$.textAlignLeft, $$.pl1, $$.textThemeReverse]}>
-									{v.name}
-								</Text>
-								<Form.Input
-									onChangeText={(val: string) => setAttr(v.id, val)}
-									value={data.attr[v.name]}
-								/>
-							</View>
-						);
-					else if(v.type === 'num')
-						return (
-							<View key={v.id} style={[$$.flex, $$.justifyContentStart, $$.mt3]}>
-								<Text style={[$$.textAlignLeft, $$.pl1, $$.textThemeReverse]}>
-									{v.name}
-								</Text>
-								<Form.Input
-									style={[]}
-									onChangeText={(val: string) => setAttr(v.id, val)}
-									value={data.attr[v.name]}
-									keyboardType="number-pad"
-								/>
-							</View>
-						);
-					else if(v.type === 'checkbox')
-						return (
-							<View key={v.id} style={[$$.flex, $$.alignItemsStart, $$.mt3]}>
-								<Text style={[$$.textAlignLeft, $$.pl1, $$.textThemeReverse]}>
-									{v.name}
-								</Text>
-								<Switch
-									trackColor={{false: $$.Const.Col.darker, true: $$.Const.Col.primaryShadow}}
-									thumbColor={data.attr[v.name]? $$.Const.Col.primary : $$.Const.Col.secondary}
-									onValueChange={(val: boolean) => setAttr(v.id, val)}
-									value={data.attr[v.name]}
-								/>
-							</View>
-						);
-					else if(v.type === 'date')
-						return (
-							<View key={v.id} style={[$$.flex, $$.alignItemsStart, $$.mt3]}>
-								<Text style={[$$.textAlignLeft, $$.pl1, $$.textThemeReverse]}>
-									{v.name}
-								</Text>
-							   <DatePickerModal date={data.attr[v.name]} setDate={(val: number) => setAttr(v.id, val)}/>
-							</View>
-						);
-				})
+				attr.map(v => (
+					<View key={v.id} style={[$$.flex, $$.alignItemsStart, $$.mt3]}>
+						<Text style={[$$.textAlignLeft, $$.pl1, $$.textThemeReverse]}>
+							{v.name}
+						</Text>
+						<MachineItemAttr
+							ctgryId={ctgry.id}
+							attrId={v.id}
+							attrType={v.type}
+							attrVal={data.attr[v.name]}
+							machineId={data.id}
+						/>
+					</View>
+				))
 			}
 			</View>
 		</View>
 	);
+}
+
+function MachineItemAttr({ctgryId, attrId, attrType, attrVal, machineId}: MachineItemAttrProps): JSX.Element | null {
+	const dispatch = useAppDispatch();
+
+	const setAttr = useCallback((value: any) => {
+		dispatchAndStore(dispatch, setMachineAttr, {
+			ctgryId,
+			attrId,
+			machineId,
+			attrVal: value,
+		});
+	}, [ctgryId, attrId, machineId]);
+
+	if(attrType === 'text')
+		return (
+			<Form.Input
+				style={[$$.w100]}
+				onChangeText={setAttr}
+				value={attrVal}
+			/>
+		);
+	else if(attrType === 'num')
+		return (
+			<Form.Input
+				style={[$$.w100]}
+				onChangeText={setAttr}
+				value={attrVal}
+				keyboardType="number-pad"
+			/>
+		);
+	else if(attrType === 'checkbox')
+		return (
+			<Switch
+				trackColor={{false: $$.Const.Col.darker, true: $$.Const.Col.primaryShadow}}
+				thumbColor={attrVal? $$.Const.Col.primary : $$.Const.Col.secondary}
+				onValueChange={setAttr}
+				value={attrVal}
+			/>
+		);
+	else if(attrType === 'date')
+		return (
+			<DatePickerModal date={attrVal} setDate={setAttr}/>
+		);
+	else
+		return null;
 }
 
 function DatePickerModal({date, setDate = f=>f}: DatePickerModalProps): JSX.Element {
